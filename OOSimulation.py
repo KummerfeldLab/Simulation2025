@@ -2,8 +2,7 @@ import pandas as pd
 from dataclasses import dataclass
 from numpy.random import default_rng
 from DaO_simulation import dao
-from SpatialAnalytics import boss
-#from Exceptions import ValueError
+import boss
 import numpy as np
 import secrets
 
