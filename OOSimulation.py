@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from numpy.random import default_rng
 from DaO_simulation import dao
 from SpatialAnalytics import boss
+#from Exceptions import ValueError
 import numpy as np
 import secrets
 
@@ -11,6 +12,7 @@ import secrets
 class SEM:
     nvars: int = 10
     nrows: int = 50
+    d: float = None
     avg_deg: int = 2
     seed: int = secrets.randbits(63)
     directed: bool = True
@@ -19,6 +21,12 @@ class SEM:
     #   G: np.array = None
 
     def __post_init__(self):
+        # require that only one of d, avg_deg is None
+        if (self.d is None and self.avg_deg is None) or (self.d is not None and self.avg_deg is not None):
+            raise ValueError('Exactly one of d and avg_deg must be None')
+
+
+        
         self.names = [f"X_{x}" for x in range(self.nvars)]
         self.rng = default_rng(self.seed)
         self.make_graph()
@@ -41,7 +49,7 @@ class SEM:
         the beta matrix self.B,
         and the error vector self.o
         """
-        g = dao.er_dag(self.nvars, ad=self.avg_deg, rng=self.rng)
+        g = dao.er_dag(self.nvars, d=self.d, ad=self.avg_deg, rng=self.rng)
         g = dao.sf_out(g, rng=self.rng)
         self.G = dao.randomize_graph(g, rng=self.rng)
         self.R, self.B, self.o = dao.corr(self.G, rng=self.rng)
