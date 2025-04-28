@@ -11,7 +11,7 @@ import secrets
 class SEM:
     nvars: int = 10
     nrows: int = 50
-    d: float = None
+    n_edges: int = None
     avg_deg: int = 2
     seed: int = secrets.randbits(63)
     directed: bool = True
@@ -21,7 +21,7 @@ class SEM:
 
     def __post_init__(self):
         # require that only one of d, avg_deg is None
-        if (self.d is None and self.avg_deg is None) or (self.d is not None and self.avg_deg is not None):
+        if (self.n_edges is None and self.avg_deg is None) or (self.n_edges is not None and self.avg_deg is not None):
             raise ValueError('Exactly one of d and avg_deg must be None')
 
 
