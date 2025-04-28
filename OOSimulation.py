@@ -109,8 +109,10 @@ class SEM:
         d['seed'] = self.seed
         d['nrows'] = self.nrows
         d['nvars'] = self.nvars
-        d['avg_deg'] = self.avg_deg
-        d['nedges'] = self.n_edges
+        if self.avg_deg is not None:
+            d['avg_deg'] = self.avg_deg
+        if self.n_edges is not None:
+            d['nedges'] = self.n_edges
         d['TP'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 1)].seed.count())
         d['FN'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 0)].seed.count())
         d['FP'] = int(r.loc[(r.TrueEdge == 0)].seed.count())
