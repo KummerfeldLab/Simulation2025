@@ -67,6 +67,48 @@ class SEM:
                 el.append((u, v))
         return el
 
+    def all_edge_df(self):
+        df = self.true_edge_df()
+        true_edges = set(self.get_edges())
+        directed_edges = self.results[0]
+        undirected_edges = self.results[1]
+        for u,v in directed_edges + undirected_edges:
+            if (u,v) in true_edges or (v,u) in true_edges:
+                continue
+            else:
+                oriented = 0
+                if (u,v) in directed_edges:
+                    oriented = 1
+                if len(df) == 0:
+                    idx = 0
+                    df.u = df.u.astype(pd.StringDtype())
+                    df.v = df.v.astype(pd.StringDtype())
+                else:
+                    idx = df.index.max() + 1
+                df.at[idx, 'seed'] = self.seed
+                df.at[idx, 'nrows'] = self.nrows
+                df.at[idx, 'nvars'] = self.nvars
+                df.at[idx, 'avg_deg'] = self.avg_deg
+                df.at[idx, 'u'] = u
+                df.at[idx, 'v'] = v
+                df.at[idx, 'TrueEdge'] = 0
+                df.at[idx, 'Oriented'] = oriented
+        return df
+
+    def summary(self):
+        r = self.all_edge_df()
+        d = {}
+        d['seed'] = self.seed
+        d['nrows'] = self.nrows
+        d['nvars'] = self.nvars
+        d['avg_deg'] = self.avg_deg
+        d['d'] = self.d
+        d['TP'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 1)].seed.count())
+        d['FN'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 0)].seed.count())
+        d['FP'] = int(r.loc[(r.TrueEdge == 0)].seed.count())
+        d['TN'] = (self.nvars * (self.nvars - 1) * 0.5) - (d['TP'] + d['FN'] + d['FP'])
+        return d
+        
     def true_edge_df(self):
         true_edges = set(self.get_edges())
         directed_edges = self.results[0]
