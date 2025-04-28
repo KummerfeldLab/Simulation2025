@@ -24,6 +24,9 @@ class SEM:
         if (self.n_edges is None and self.avg_deg is None) or (self.n_edges is not None and self.avg_deg is not None):
             raise ValueError('Exactly one of d and avg_deg must be None')
 
+        if self.n_edges is not None:
+            n_complete_edges = (self.nvars * (self.nvars - 1)) // 2
+            self.d = self.n_edges / n_complete_edges
 
         
         self.names = [f"X_{x}" for x in range(self.nvars)]
