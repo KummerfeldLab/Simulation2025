@@ -92,6 +92,7 @@ class SEM:
                 df.at[idx, 'seed'] = self.seed
                 df.at[idx, 'nrows'] = self.nrows
                 df.at[idx, 'nvars'] = self.nvars
+                df.at[idx, 'nedges'] = self.n_edges
                 df.at[idx, 'avg_deg'] = self.avg_deg
                 df.at[idx, 'u'] = u
                 df.at[idx, 'v'] = v
@@ -109,7 +110,7 @@ class SEM:
         d['nrows'] = self.nrows
         d['nvars'] = self.nvars
         d['avg_deg'] = self.avg_deg
-        d['d'] = self.d
+        d['nedges'] = self.n_edges
         d['TP'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 1)].seed.count())
         d['FN'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 0)].seed.count())
         d['FP'] = int(r.loc[(r.TrueEdge == 0)].seed.count())
@@ -124,6 +125,7 @@ class SEM:
         edf["seed"] = self.seed
         edf["nrows"] = self.nrows
         edf["nvars"] = self.nvars
+        edf["nedges"] = self.n_edges
         edf["avg_deg"] = self.avg_deg
         edf["u"] = [u for u, v in true_edges]
         edf["v"] = [v for u, v in true_edges]
