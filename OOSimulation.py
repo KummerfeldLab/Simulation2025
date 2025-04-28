@@ -69,6 +69,7 @@ class SEM:
 
     def all_edge_df(self):
         df = self.true_edge_df()
+                
         true_edges = set(self.get_edges())
         directed_edges = self.results[0]
         undirected_edges = self.results[1]
@@ -93,6 +94,9 @@ class SEM:
                 df.at[idx, 'v'] = v
                 df.at[idx, 'TrueEdge'] = 0
                 df.at[idx, 'Oriented'] = oriented
+                
+        for col in ['seed', 'nrows', 'nvars']:
+            df[col] = df[col].astype(int)
         return df
 
     def summary(self):
@@ -106,7 +110,7 @@ class SEM:
         d['TP'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 1)].seed.count())
         d['FN'] = int(r.loc[(r.TrueEdge == 1) & (r.Discovered == 0)].seed.count())
         d['FP'] = int(r.loc[(r.TrueEdge == 0)].seed.count())
-        d['TN'] = (self.nvars * (self.nvars - 1) * 0.5) - (d['TP'] + d['FN'] + d['FP'])
+        d['TN'] = int((self.nvars * (self.nvars - 1) / 2)) - (d['TP'] + d['FN'] + d['FP'])
         return d
         
     def true_edge_df(self):
