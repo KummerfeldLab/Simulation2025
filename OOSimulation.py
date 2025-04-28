@@ -2,7 +2,7 @@ import pandas as pd
 from dataclasses import dataclass
 from numpy.random import default_rng
 from DaO_simulation import dao
-import boss
+from Simulation2025 import boss
 import numpy as np
 import secrets
 
