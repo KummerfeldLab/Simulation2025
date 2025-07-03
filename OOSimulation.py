@@ -64,6 +64,8 @@ class SEM:
         self.data = pd.DataFrame(X, columns=self.names)
 
     def get_edges(self):
+        """ Convenience class to return a DataFrame version of the 
+        generating graph G """
         el = []
         df = pd.DataFrame(self.G, index=self.names, columns=self.names)
         for v in df.columns:
