@@ -51,7 +51,8 @@ class SEM:
         the beta matrix self.B,
         and the error vector self.o
         """
-        g = dao.er_dag(self.nvars, d=self.d, ad=self.avg_deg, rng=self.rng)
+#       g = dao.er_dag(self.nvars, d=self.d, ad=self.avg_deg, rng=self.rng)
+        g = dao.er_dag(self.nvars, ad=self.avg_deg, rng=self.rng)
         g = dao.sf_out(g, rng=self.rng)
         self.G = dao.randomize_graph(g, rng=self.rng)
         self.R, self.B, self.o = dao.corr(self.G, rng=self.rng)
