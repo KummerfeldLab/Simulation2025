@@ -24,10 +24,8 @@ class SEM:
         if (self.n_edges is None and self.avg_deg is None) or (self.n_edges is not None and self.avg_deg is not None):
             raise ValueError('Exactly one of d and avg_deg must be None')
 
-        if self.n_edges is not None:
-            n_complete_edges = (self.nvars * (self.nvars - 1)) // 2
-            self.d = self.n_edges / n_complete_edges
-
+        if self.n_edges is None:
+            self.n_edges = int(self.nvars * self.avg_deg // 2)
         
         self.names = [f"X_{x}" for x in range(self.nvars)]
         self.rng = default_rng(self.seed)
@@ -50,8 +48,9 @@ class SEM:
         and from it create the correlation matrix self.R,
         the beta matrix self.B,
         and the error vector self.o
+
+        This function expects that self.nvars, self.avg_deg, and self.rng are set
         """
-#       g = dao.er_dag(self.nvars, d=self.d, ad=self.avg_deg, rng=self.rng)
         g = dao.er_dag(self.nvars, ad=self.avg_deg, rng=self.rng)
         g = dao.sf_out(g, rng=self.rng)
         self.G = dao.randomize_graph(g, rng=self.rng)
@@ -95,14 +94,17 @@ class SEM:
                 df.at[idx, 'seed'] = self.seed
                 df.at[idx, 'nrows'] = self.nrows
                 df.at[idx, 'nvars'] = self.nvars
-                df.at[idx, 'nedges'] = self.n_edges
-                df.at[idx, 'avg_deg'] = self.avg_deg
+                if self.n_edges is not None:
+                    df.at[idx, 'nedges'] = self.n_edges
+                else:
+                    df.at[idx, 'avg_deg'] = self.avg_deg
+                    df.at[idx, 'nedges'] = int(self.nvars * self.avg_deg)
                 df.at[idx, 'u'] = u
                 df.at[idx, 'v'] = v
                 df.at[idx, 'TrueEdge'] = 0
                 df.at[idx, 'Oriented'] = oriented
                 
-        for col in ['seed', 'nrows', 'nvars']:
+        for col in ['seed', 'nrows', 'nvars', 'nedges']:
             df[col] = df[col].astype(int)
         return df
 
@@ -121,7 +123,64 @@ class SEM:
         d['FP'] = int(r.loc[(r.TrueEdge == 0)].seed.count())
         d['TN'] = int((self.nvars * (self.nvars - 1) / 2)) - (d['TP'] + d['FN'] + d['FP'])
         return d
-        
+
+    def edge_df(self):
+        true_edges = set(self.get_edges())
+        directed_edges = self.results[0]
+        undirected_edges = self.results[1]
+        false_edges = []
+        for u,v in directed_edges + undirected_edges:
+            if (u,v) not in true_edges and (v,u) not in true_edges:
+                false_edges.append((u,v))
+
+        rows = []
+        for u,v in directed_edges + undirected_edges + false_edges:
+                row = {'seed': self.seed,
+                    'nrows': self.nrows,
+                    "nvars": self.nvars,
+                    "nedges": self.n_edges,
+                    "avg_deg"] = self.avg_deg,
+                    "u":  u,
+                    "v": v,
+                    "Beta": self.Beta_df.at[u, v]
+                    "TrueEdge" : 0
+                    }
+
+        if (u,v) not in false_edges:
+            row["TrueEdge"] = 1
+        discovered = []
+        oriented = []
+        correctly_oriented = []
+        for u, v in true_edges:
+            if (u, v) in directed_edges:
+                discovered.append(1)
+                oriented.append(1)
+                correctly_oriented.append(1)
+            elif (v, u) in directed_edges:
+                discovered.append(1)
+                oriented.append(1)
+                correctly_oriented.append(0)
+            elif (u, v) in undirected_edges or (v, u) in undirected_edges:
+                discovered.append(1)
+                oriented.append(0)
+                correctly_oriented.append(0)
+            else:
+                discovered.append(0)
+                oriented.append(0)
+                correctly_oriented.append(0)
+        edf["Discovered"] = discovered
+        edf["Oriented"] = oriented
+        edf["Correctly Oriented"] = correctly_oriented
+        edf["outdeg"] = 0
+        edf["indeg"] = 0
+        edf["penalty_discount"] = self.pd
+        for u in edf.u.unique():
+            edf.loc[edf.u == u, "outdeg"] = len(edf[edf.u == u])
+        for v in edf.v.unique():
+            edf.loc[edf.v == v, "indeg"] = len(edf[edf.v == v])
+
+        return edf
+
     def true_edge_df(self):
         true_edges = set(self.get_edges())
         directed_edges = self.results[0]
@@ -130,8 +189,61 @@ class SEM:
         edf["seed"] = self.seed
         edf["nrows"] = self.nrows
         edf["nvars"] = self.nvars
-        edf["nedges"] = self.n_edges
-        edf["avg_deg"] = self.avg_deg
+        if self.n_edges is not None:
+            edf["nedges"] = self.n_edges
+        else:
+            edf["avg_deg"] = self.avg_deg
+            edf["nedges"] = edf.avg_deg.mul(self.nvars).astype(int)
+        edf["u"] = [u for u, v in true_edges]
+        edf["v"] = [v for u, v in true_edges]
+        edf["Beta"] = [self.Beta_df.at[u, v] for u, v in true_edges]
+        edf["TrueEdge"] = [1 for e in true_edges]
+        discovered = []
+        oriented = []
+        correctly_oriented = []
+        for u, v in true_edges:
+            if (u, v) in directed_edges:
+                discovered.append(1)
+                oriented.append(1)
+                correctly_oriented.append(1)
+            elif (v, u) in directed_edges:
+                discovered.append(1)
+                oriented.append(1)
+                correctly_oriented.append(0)
+            elif (u, v) in undirected_edges or (v, u) in undirected_edges:
+                discovered.append(1)
+                oriented.append(0)
+                correctly_oriented.append(0)
+            else:
+                discovered.append(0)
+                oriented.append(0)
+                correctly_oriented.append(0)
+        edf["Discovered"] = discovered
+        edf["Oriented"] = oriented
+        edf["Correctly Oriented"] = correctly_oriented
+        edf["outdeg"] = 0
+        edf["indeg"] = 0
+        edf["penalty_discount"] = self.pd
+        for u in edf.u.unique():
+            edf.loc[edf.u == u, "outdeg"] = len(edf[edf.u == u])
+        for v in edf.v.unique():
+            edf.loc[edf.v == v, "indeg"] = len(edf[edf.v == v])
+
+        return edf
+
+    def true_edge_df(self):
+        true_edges = set(self.get_edges())
+        directed_edges = self.results[0]
+        undirected_edges = self.results[1]
+        edf = pd.DataFrame(index=range(len(true_edges)))
+        edf["seed"] = self.seed
+        edf["nrows"] = self.nrows
+        edf["nvars"] = self.nvars
+        if self.n_edges is not None:
+            edf["nedges"] = self.n_edges
+        else:
+            edf["avg_deg"] = self.avg_deg
+            edf["nedges"] = edf.avg_deg.mul(self.nvars).astype(int)
         edf["u"] = [u for u, v in true_edges]
         edf["v"] = [v for u, v in true_edges]
         edf["Beta"] = [self.Beta_df.at[u, v] for u, v in true_edges]
