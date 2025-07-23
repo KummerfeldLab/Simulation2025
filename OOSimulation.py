@@ -16,7 +16,7 @@ class SEM:
     seed: int = secrets.randbits(63)
     directed: bool = True
     debug: bool = False
-    pd: int = 64
+    pd: int = 2
     #   G: np.array = None
 
     def __post_init__(self):
@@ -24,9 +24,11 @@ class SEM:
         if (self.n_edges is None and self.avg_deg is None) or (self.n_edges is not None and self.avg_deg is not None):
             raise ValueError('Exactly one of d and avg_deg must be None')
 
+        # set n_edges
         if self.n_edges is None:
             self.n_edges = int(self.nvars * self.avg_deg // 2)
-        
+
+        # Create egde names, set RNG, make generating graph, and generate data
         self.names = [f"X_{x}" for x in range(self.nvars)]
         self.rng = default_rng(self.seed)
         self.make_graph()
@@ -37,6 +39,7 @@ class SEM:
         self.Beta_df = pd.DataFrame(
             self.B, columns=self.names, index=self.names)
 
+        # Run Boss on the data
         self.results = boss.Boss(
             self.data, penalty_discount=self.pd, seed=self.seed)
 
@@ -125,7 +128,8 @@ class SEM:
         return d
 
     def edge_df(self):
-        true_edges = set(self.get_edges())
+        true_edges = self.get_edges()
+#       true_edges = set(self.get_edges())
         directed_edges = self.results[0]
         undirected_edges = self.results[1]
         false_edges = []
@@ -134,52 +138,38 @@ class SEM:
                 false_edges.append((u,v))
 
         rows = []
-        for u,v in directed_edges + undirected_edges + false_edges:
-                row = {'seed': self.seed,
-                    'nrows': self.nrows,
-                    "nvars": self.nvars,
-                    "nedges": self.n_edges,
-                    "avg_deg"] = self.avg_deg,
-                    "u":  u,
-                    "v": v,
-                    "Beta": self.Beta_df.at[u, v]
-                    "TrueEdge" : 0
-                    }
+        for u,v in true_edges + false_edges:
+            row = {'seed': self.seed,
+                   "PD": self.pd,
+                   'nrows': self.nrows,
+                   "nvars": self.nvars,
+                   "nedges": self.n_edges,
+                   "avg_deg": self.avg_deg,
+                   "u":  u,
+                   "v": v,
+                   "Beta": self.Beta_df.at[u, v],
+                   "TrueEdge" : 0,
+                   "Discovered" : 0,
+                   "Correctly Oriented" : 0,
+                  }
+            if (u,v) not in false_edges:
+                row["TrueEdge"] = 1
+            if (u,v) in directed_edges and (u,v) in true_edges:
+                row["Discovered"] = 1
+                row["Correctly Oriented"] = 1
+            if (u,v) in true_edges and (v,u) in directed_edges:
+                row["Discovered"] = 1
+            rows.append(row)
+        retval =  pd.DataFrame(rows)
+        for col in ['seed', 'nrows', 'nvars', 'avg_deg', 'u', 'v', 'PD']:
+            retval[col] = retval[col].astype('category')
 
-        if (u,v) not in false_edges:
-            row["TrueEdge"] = 1
-        discovered = []
-        oriented = []
-        correctly_oriented = []
-        for u, v in true_edges:
-            if (u, v) in directed_edges:
-                discovered.append(1)
-                oriented.append(1)
-                correctly_oriented.append(1)
-            elif (v, u) in directed_edges:
-                discovered.append(1)
-                oriented.append(1)
-                correctly_oriented.append(0)
-            elif (u, v) in undirected_edges or (v, u) in undirected_edges:
-                discovered.append(1)
-                oriented.append(0)
-                correctly_oriented.append(0)
-            else:
-                discovered.append(0)
-                oriented.append(0)
-                correctly_oriented.append(0)
-        edf["Discovered"] = discovered
-        edf["Oriented"] = oriented
-        edf["Correctly Oriented"] = correctly_oriented
-        edf["outdeg"] = 0
-        edf["indeg"] = 0
-        edf["penalty_discount"] = self.pd
-        for u in edf.u.unique():
-            edf.loc[edf.u == u, "outdeg"] = len(edf[edf.u == u])
-        for v in edf.v.unique():
-            edf.loc[edf.v == v, "indeg"] = len(edf[edf.v == v])
-
-        return edf
+#       for u in retval[retval.TrueEdge ==1].u.unique():
+#           retval.loc[retval.u == u, "outdeg"] = len(retval.u == u])
+#       for v in retval[retval.v.unique():
+#           retval.loc[retval.v == v, "indeg"] = len(retval[retval.v == v])
+            
+        return retval
 
     def true_edge_df(self):
         true_edges = set(self.get_edges())
