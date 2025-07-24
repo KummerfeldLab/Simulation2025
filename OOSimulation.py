@@ -152,13 +152,18 @@ class SEM:
                    "Discovered" : 0,
                    "Correctly Oriented" : 0,
                   }
+            
             if (u,v) not in false_edges:
                 row["TrueEdge"] = 1
+            else:
+                row["Discovered"] = 1
+                
             if (u,v) in directed_edges and (u,v) in true_edges:
                 row["Discovered"] = 1
                 row["Correctly Oriented"] = 1
-            if (u,v) in true_edges and (v,u) in directed_edges:
+            elif (u,v) in true_edges and (v,u) in directed_edges:
                 row["Discovered"] = 1
+                
             rows.append(row)
         retval =  pd.DataFrame(rows)
         for col in ['seed', 'nrows', 'nvars', 'avg_deg', 'u', 'v', 'PD']:
